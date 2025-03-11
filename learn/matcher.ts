@@ -699,12 +699,16 @@ export class Matcher {
         if (theirAge < 18 && underageScore !== null)
             return Matcher.formatKinkScore(underageScore, 'underage characters');
 
-        const normalAgeRanges =
-            yourAge !== null && theirAge !== null
-         && yourAge  >     0 && theirAge  >     0
-         && yourAge  <=   80 && theirAge  <=   80;
+        const bothHaveAge = yourAge  !== null
+                         && theirAge !== null;
 
-        if (normalAgeRanges) {
+        // 80 is a magic number and I'll accept debate to change it
+        // The older a character is, the more nebulous o/y kinks become, so exclude large ranges.
+        const bothInHumanAgeRange = bothHaveAge
+                                 && yourAge  >     0 && theirAge  >     0
+                                 && yourAge  <=   80 && theirAge  <=   80;
+
+        if (bothInHumanAgeRange) {
             const ageDifference    = Math.abs(yourAge - theirAge);
             const neededDifference = Math.floor(yourAge * 0.2);
 
@@ -721,17 +725,17 @@ export class Matcher {
                     return Matcher.formatKinkScore(youngerCharactersScore, 'younger characters');
             }
 
-            // Match: Adults with no kinks matching age proximity
+            // Match: Adults with no kinks matching age proximity (inverse of o/y)
             if (yourAge >= 18 && theirAge >= 18 &&  ageDifference < neededDifference)
                 return new Score(Scoring.WEAK_MATCH, `Has <span>similar age</span>`);
 
-            // Matches: UA with no kinks matching age proximity
+            // Matches: UA with no kinks matching age proximity (inverse of o/y)
             if (yourAge < 18 && ageDifference <= 2)
                 return new Score(Scoring.WEAK_MATCH, `Has <span>similar age</span>`);
 
             // Matches: You're adult and they're not
             if (yourAge >= 18 && theirAge < 18)
-                return new Score(Scoring.MISMATCH, 'No <span>ages under 18</span>');
+                return new Score(Scoring.MISMATCH, 'No <span>minors</span>');
         }
 
         // Matches:
