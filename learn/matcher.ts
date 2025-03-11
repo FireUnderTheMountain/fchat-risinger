@@ -709,6 +709,7 @@ export class Matcher {
             const neededDifference = Math.floor(yourAge * 0.2);
 
             // Matches: Any age against any age, with age difference kinks
+            // A young adult with YC will match against certain UA ages without UA kink.
             if (ageDifference >= neededDifference) {
                 const olderCharactersScore   = Matcher.getKinkPreference(you, Kink.OlderCharacters);
                 const youngerCharactersScore = Matcher.getKinkPreference(you, Kink.YoungerCharacters);
