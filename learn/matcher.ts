@@ -686,37 +686,59 @@ export class Matcher {
 
     private resolveAgeScore(): Score {
         const you = this.you;
+        const yourAge = this.yourAnalysis.age;
         const theirAge = this.theirAnalysis.age;
 
+        // Matches: They have no age, so you can't match anything
         if (theirAge === null)
             return new Score(Scoring.NEUTRAL);
 
-        const ageplayScore = Matcher.getKinkPreference(you, Kink.Ageplay);
         const underageScore = Matcher.getKinkPreference(you, Kink.UnderageCharacters);
 
-        if ((theirAge < 16) && (ageplayScore !== null))
-            return Matcher.formatKinkScore(ageplayScore, `ages of ${theirAge}`);
+        // Matches: You're anyone with UA kink
+        if (theirAge < 18 && underageScore !== null)
+            return Matcher.formatKinkScore(underageScore, 'underage characters');
 
-        if ((theirAge < 16) && (ageplayScore === null))
-            return Matcher.formatKinkScore(KinkPreference.No, `ages of ${theirAge}`);
+        const normalAgeRanges =
+            yourAge !== null && theirAge !== null
+         && yourAge  >     0 && theirAge  >     0
+         && yourAge  <=   80 && theirAge  <=   80;
 
-        if ((theirAge < 18) && (theirAge >= 16) && (underageScore !== null))
-            return Matcher.formatKinkScore(underageScore, `ages of ${theirAge}`);
+        if (normalAgeRanges) {
+            const ageDifference    = Math.abs(yourAge - theirAge);
+            const neededDifference = Math.floor(yourAge * 0.2);
 
-        const yourAge = this.yourAnalysis.age;
+            // Matches: Any age against any age, with age difference kinks
+            if (ageDifference >= neededDifference) {
+                const olderCharactersScore   = Matcher.getKinkPreference(you, Kink.OlderCharacters);
+                const youngerCharactersScore = Matcher.getKinkPreference(you, Kink.YoungerCharacters);
 
-        if ((yourAge !== null) && (yourAge > 0) && (theirAge > 0) && (yourAge <= 80) && (theirAge <= 80)) {
-            const olderCharactersScore = Matcher.getKinkPreference(you, Kink.OlderCharacters);
-            const youngerCharactersScore = Matcher.getKinkPreference(you, Kink.YoungerCharacters);
-            const ageDifference = Math.abs(yourAge - theirAge);
+                if (yourAge < theirAge && olderCharactersScore !== null)
+                    return Matcher.formatKinkScore(olderCharactersScore, 'older characters');
 
-            if ((yourAge < theirAge) && (olderCharactersScore !== null) && (ageDifference >= 8))
-                return Matcher.formatKinkScore(olderCharactersScore, 'older characters');
+                if (yourAge > theirAge && youngerCharactersScore !== null)
+                    return Matcher.formatKinkScore(youngerCharactersScore, 'younger characters');
+            }
 
-            if ((yourAge > theirAge) && (youngerCharactersScore !== null) && (ageDifference >= 8))
-                return Matcher.formatKinkScore(youngerCharactersScore, 'younger characters');
+            // Match: Adults with no kinks matching age proximity
+            if (yourAge >= 18 && theirAge >= 18 &&  ageDifference < neededDifference)
+                return new Score(Scoring.WEAK_MATCH, `Has <span>similar age</span>`);
+
+            // Matches: UA with no kinks matching age proximity
+            if (yourAge < 18 && ageDifference <= 2)
+                return new Score(Scoring.WEAK_MATCH, `Has <span>similar age</span>`);
+
+            // Matches: You're adult and they're not
+            if (yourAge >= 18 && theirAge < 18)
+                return new Score(Scoring.MISMATCH, 'No <span>ages under 18</span>');
         }
 
+        // Matches:
+        //   You're UA, they're adult, you have no relevant kinks;
+        //   You're UA, they're UA, you have >2 year age gap, you have no relevant kinks;
+        //   You're adult, they're adult and you have no age diff kinks;
+        //   You or they are 2000 year old cosmic beings;
+        //   You have no age and no relevant kinks
         return new Score(Scoring.NEUTRAL);
     }
 
